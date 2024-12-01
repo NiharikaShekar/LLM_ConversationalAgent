@@ -51,7 +51,7 @@ Ensure all dependencies and libraries are properly configured in the `build.sbt`
 
 3. **Run the Application**
 
-   Start the LLM server by running LLMServer.scala file.
+   Start the LLM server by running LLMServerMain.scala file.
    
 4. **Invoke the First API to Generate Text from Amazon Bedrock**
 
