@@ -1,83 +1,62 @@
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.stream.ActorMaterializer
 import JsonFormats._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import com.typesafe.config.ConfigFactory
+import org.slf4j.LoggerFactory
 
-import scala.concurrent.Future
-import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+import protobuf.llmQuery._
 
-// Convert request to JSON
-import spray.json._
-
-import protobuf.llmQuery.{LlmQueryRequest, LlmQueryResponse}
+import scala.util.{Failure, Success}
 
 object LLMRoutes {
+  private val logger = LoggerFactory.getLogger(getClass)
+  private val OLLAMA_QUERIES_RANGE = "ollama.range"
 
-  private def queryLLM(request: LlmQueryRequest)(implicit system: ActorSystem): Future[LLMResponse] = {
-    implicit val ec = system.dispatcher
-    implicit val materializer = ActorMaterializer()
+  def routes(implicit system: ActorSystem): Route = {
+    // ExecutionContext for handling Futures
+    implicit val ec: ExecutionContext = system.dispatcher
 
-    val url = "https://ax2c4dlop1.execute-api.us-east-1.amazonaws.com/CS441-HW3-main/CS441_HW3_Lambda"
-
-    //val llmReq : LlmQueryRequest =
-    val maxWords = ConfigFactory.load().getString("maxWords").toInt
-    val protoRequest : LlmQueryRequest = new LlmQueryRequest(request.input, request.maxWords)
-
-    // Create HTTP request
-    val httpRequest = HttpRequest(
-      method = HttpMethods.GET,
-      uri = Uri(url),
-      headers = List(`Content-Type`(ContentTypes.`application/grpc+proto`)),
-      entity = HttpEntity(ContentTypes.`application/grpc+proto`, protoRequest.toProtoString.getBytes)
-    )
-
-    // Send request and handle response
-    val responseFuture = Http().singleRequest(httpRequest).flatMap { response =>
-      response.status match {
-        case StatusCodes.OK =>
-          // Extract response body and parse JSON
-          println(response)
-          response.entity.toStrict(10.seconds).map { entity =>
-            val responseBody = entity.getData().utf8String
-
-            println(responseBody)
-            val resp = responseBody.parseJson.convertTo[LLMResponse]
-            if (resp.output.split(" ").toList.size >maxWords) {
-              new LLMResponse(resp.input, resp.output.split(" ").toList.slice(0, maxWords).toList.mkString(" "))
-            } else {
-              resp
+    concat(
+      path("query-llm") {
+        get {
+          entity(as[LlmQueryRequest]) { request =>
+            // Use onSuccess to handle the asynchronous API call
+            onSuccess(ApiInvocationHelper.queryLLM(request)) { response =>
+              complete(response)
             }
           }
-        case _ =>
-          // Handle error cases
-          Future.failed(new RuntimeException(s"API call failed with status: ${response.status}"))
-      }
-    }
+        }
+      },
+      path("start-conversation-agent") {
+        get {
+          entity(as[LlmQueryRequest]) { request =>
+            // Start AutomatedConversationalAgent in a separate thread
+            Future {
+              logger.info("Starting Automated Conversational Agent...")
+              AutomatedConversationalAgent.start(request)
+              logger.info(s"Successfully completed the execution of the client...")
+            }.onComplete{
+              case Success(value) => println(s"Successfully completed the execution of the client $value")
+              case Failure(ex)    => println(s"An error occurred when executing the client: $ex")
+            }
 
-    responseFuture
-  }
-
-  def routes(implicit system: ActorSystem): Route = concat(
-    path("query-llm") {
-      get {
-        entity(as[LlmQueryRequest]) { request =>
-          // Use onSuccess to handle the asynchronous API call
-          onSuccess(queryLLM(request)) { response =>
-            complete(response)
+            // Immediately respond to the client
+            complete (
+              StatusCodes.Accepted,
+              "Conversation started, Please check for file in location " +
+                "src/main/resources/agent-resp/convestn-{timestamp}"
+            )
           }
         }
+      },
+      path("health") {
+        get {
+          complete(StatusCodes.OK, "LLM REST Service is up and running!")
+        }
       }
-    },
-    path("health") {
-      get {
-        complete(StatusCodes.OK, "LLM REST Service is up and running!")
-      }
-    }
-  )
+    )
+  }
 }

@@ -4,6 +4,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers._
 import akka.stream.ActorMaterializer
 import JsonFormats._
+import akka.util.ByteString
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -31,8 +32,7 @@ object ApiInvocationHelper {
     val httpRequest = HttpRequest(
       method = HttpMethods.GET,
       uri = Uri(url),
-      headers = List(`Content-Type`(ContentTypes.`application/grpc+proto`)),
-      entity = HttpEntity(ContentTypes.`application/grpc+proto`, protoRequest.toProtoString.getBytes)
+      entity = HttpEntity.Strict(ContentTypes.`application/grpc+proto`, ByteString(protoRequest.toProtoString.getBytes))
     )
 
     // Send request and handle response

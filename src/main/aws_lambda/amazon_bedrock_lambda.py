@@ -2,7 +2,7 @@ import json
 import boto3
 import base64
 
-def lambda_bedrock(event, context):
+def amazon_bedrock_lambda(event, context):
 
     try:
         # Decode input
