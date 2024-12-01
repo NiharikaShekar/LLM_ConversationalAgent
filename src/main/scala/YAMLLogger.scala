@@ -5,7 +5,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import java.time.Instant
 import scala.jdk.CollectionConverters._
 
-case class IterationResult(
+case class YAMLLogger(
                             iteration: String,
                             question: String,
                             llmResponse: String,
@@ -13,32 +13,37 @@ case class IterationResult(
                           )
 
 object YAML_Helper {
+  // Setting options for YAML formatting
   private val options = new DumperOptions
   options.setPrettyFlow(true)
-  options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK) // Use block formatting for readability
+  options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK) // Use block formatting for better readability
 
   private val yaml = new Yaml(options)
 
-  def createMutableResult(): ListBuffer[IterationResult] = {
-    // List of iteration results
-    ListBuffer.empty[IterationResult]
+  // Creating an empty list to hold iteration results
+  def createMutableResult(): ListBuffer[YAMLLogger] = {
+    ListBuffer.empty[YAMLLogger]
   }
 
+  // Adding results to the list for each iteration
   def appendResult(
-                    results: ListBuffer[IterationResult],
+                    results: ListBuffer[YAMLLogger],
                     iteration: Int,
                     question: String,
                     llmResp: String,
                     ollamaResp: String
                   ): Unit = {
-    results += IterationResult(s"Itr-$iteration", question, llmResp, ollamaResp)
+    results += YAMLLogger(s"Itr-$iteration", question, llmResp, ollamaResp)
   }
 
-  def save(results: ListBuffer[IterationResult]): Unit = {
+  // Saving the iteration results into a YAML file
+  def save(results: ListBuffer[YAMLLogger]): Unit = {
+    // Creating a new file with the current timestamp
     val file = new File("src/main/resources/Results_Conversation/Results_Conversation-" + Instant.now().toString + ".yaml")
     val writer = new BufferedWriter(new FileWriter(file))
 
     try {
+      // Writing each iteration result to the YAML file
       results.foreach { result =>
         val entry = Map(
           result.iteration -> Map(
@@ -51,6 +56,7 @@ object YAML_Helper {
       }
       println(s"YAML file created at: ${file.getAbsolutePath}")
     } finally {
+      // Ensuring the writer is closed after saving
       writer.close()
     }
   }

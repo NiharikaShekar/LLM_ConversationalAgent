@@ -9,7 +9,8 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.jdk.CollectionConverters._
 
-object AutomatedConversationalAgent {
+object OllamaBedrockQueryAgent {
+  // Initializing the logger
   private val logger = LoggerFactory.getLogger(getClass)
 
   // Configuration keys
@@ -18,50 +19,57 @@ object AutomatedConversationalAgent {
   private val OLLAMA_MODEL = "ollama.model"
   private val OLLAMA_QUERIES_RANGE = "ollama.range"
 
-  // Prefixes for query generation
+  // Prefixing for query generation
   private val LLAMA_PREFIX = "how can you respond to the statement "
   private val LLAMA_TO_LAMBDA_PREFIX = "Do you have any comments on "
 
   def main(args: Array[String]): Unit = {
+    // Checking if the input seed text is passed
     if (args.isEmpty) {
-      logger.error("input seed text not passed")
+      logger.error("Input seed text not passed")
       sys.exit(-1)
     }
 
+    // Initializing the seed text and proto request
     val seedText = args(0)
     val protoRequest: LlmQueryRequest = new LlmQueryRequest(seedText, 100)
 
-    // Create an ActorSystem
+    // Creating an ActorSystem to manage concurrency
     implicit val system: ActorSystem = ActorSystem("AutomatedConversationalAgentSystem")
 
     try {
+      // Starting the process of querying LLM
       start(protoRequest)
     } finally {
+      // Terminating the actor system after completion
       system.terminate()
     }
   }
 
   def start(protoRequest: LlmQueryRequest)(implicit system: ActorSystem): Unit = {
-    // Initialize Ollama API
+    // Initializing Ollama API with configuration values
+    val ollamaHost = ConfigurationManager.getConfig(OLLAMA_HOST)
+    val llamaAPI = new OllamaAPI(ollamaHost)
+    llamaAPI.setRequestTimeoutSeconds(ConfigurationManager.getConfig(OLLAMA_REQUEST_TIMEOUT).toLong)
 
-    val llamaAPI = new OllamaAPI(ConfigLoader.getConfig(OLLAMA_HOST))
-    llamaAPI.setRequestTimeoutSeconds(ConfigLoader.getConfig(OLLAMA_REQUEST_TIMEOUT).toLong)
-    val llamaModel = ConfigLoader.getConfig(OLLAMA_MODEL)
-    val range = ConfigLoader.getConfig(OLLAMA_QUERIES_RANGE).toInt
+    // Loading model and query range from application.conf
+    val llamaModel = ConfigurationManager.getConfig(OLLAMA_MODEL)
+    val range = ConfigurationManager.getConfig(OLLAMA_QUERIES_RANGE).toInt
 
+    // Creating a mutable result collection for logging responses
     val results = YAML_Helper.createMutableResult()
     var currentRequest = protoRequest
 
-    // Use sequence to ensure synchronous execution
-    Iterator.range(0, range).foreach { itr =>
+    // Looping to generate responses and interact with LLM
+    (0 until range).foreach { itr =>
       try {
-        // Synchronously wait for the LLM query to complete
-        this.synchronized{
-          val response = Await.result(ApiInvocationHelper.queryLLM(currentRequest), 10.seconds)
+        // Synchronously querying LLM and awaiting the response
+        this.synchronized {
+          val response = Await.result(LLMQueryService.queryLLM(currentRequest), 10.seconds)
           val input = currentRequest.input + " "
           val output = response.output
 
-          // Synchronously generate Llama response
+          // Synchronously generating response from Llama model
           val llamaResult = llamaAPI.generate(
             llamaModel,
             LLAMA_PREFIX + input + output,
@@ -70,38 +78,27 @@ object AutomatedConversationalAgent {
           )
           val llamaResp = llamaResult.getResponse
 
+          // Printing and logging the Llama response
           println(llamaResp)
           YAML_Helper.appendResult(results, itr, input, output, llamaResp)
 
-          // Prepare next request for the next iteration
+          // Preparing the next request for the next iteration
           currentRequest = new LlmQueryRequest(LLAMA_TO_LAMBDA_PREFIX + llamaResp, 100)
-
-          // Return the result if needed
-          println("****************")
-          // println(itr, input, output, llamaResp)
         }
-        // (itr, input, output, llamaResp)
       } catch {
         case e: Exception =>
+          // Logging the error and throwing an exception if the process fails
           logger.error(s"PROCESS FAILED at iteration $itr: ${e.getMessage}", e)
           throw e
       }
     }
 
-    // Wait for all futures to complete
+    // Saving the results once all iterations are complete
     try {
-      //      val finalResults = Await.result(Future.sequence(sequencedFutures), (range * 10).seconds)
-      //      logger.info(s"Completed ${finalResults.size} iterations")
+      YAML_Helper.save(results)
     } catch {
       case e: Exception =>
         logger.error(s"Error in processing: ${e.getMessage}", e)
-    } finally {
-      YAML_Helper.save(results)
     }
   }
-
-  //  def helper() : Unit = {
-  //
-  //  }
-
 }
