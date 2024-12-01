@@ -61,7 +61,7 @@ Ensure all dependencies and libraries are properly configured in the `build.sbt`
    curl -X GET \
      http://localhost:8080/query-llm \
      -H "Content-Type: application/json" \
-     -d '{"input": "Cindrella story is based on what?", "maxWords": 100}'
+     -d '{"input": "A penny saved is a penny earned", "maxWords": 100}'
    ```
 
 5. **Invoke the Second API to Start the Conversational Agent**
@@ -72,7 +72,7 @@ Ensure all dependencies and libraries are properly configured in the `build.sbt`
    curl -X GET \
      http://localhost:8080/start-conversation-agent \
      -H "Content-Type: application/json" \
-     -d '{"input": "Cindrella story is based on what?", "maxWords": 100}'
+     -d '{"input": "A penny saved is a penny earned", "maxWords": 100}'
    ```
 
 
