@@ -2,14 +2,14 @@ syntax = "proto3";
 
 package protobuf;
 
-// The LLMRequest message definition.
+// This is the request format sent to the LLM service.
 message LlmQueryRequest {
-  string input = 1;
-  int32 maxWords = 2;
+  string input = 1; // The user-provided query input.
+  int32 maxWords = 2; // Maximum number of words for the response.
 }
 
-// The LogQueryResponse message definition.
+// This is the response format returned from the LLM service.
 message LlmQueryResponse {
-  string input = 1;
-  string output = 2;
+  string input = 1; // Echo of the input query for reference.
+  string output = 2; // The generated response from the LLM service.
 }
