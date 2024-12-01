@@ -9,6 +9,7 @@ lazy val root = project
     name := "LLM-hw3",
     version := "0.1.0-SNAPSHOT",
     scalaVersion := "2.13.13",
+    mainClass in Compile := Some("LLMServerMain"),
 
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor" % "2.6.20",
@@ -25,7 +26,9 @@ lazy val root = project
       "org.slf4j" % "slf4j-simple" % "2.0.13", //  logging
       "org.yaml" % "snakeyaml" % "1.24",              // For YAML processing
       "com.fasterxml.jackson.dataformat" % "jackson-dataformat-yaml" % "2.17.2", // Optional: Jackson for YAML
-      "org.scalameta" %% "munit" % "1.0.0" % Test
+      "org.scalameta" %% "munit" % "1.0.0" % Test,
+      "io.spray" %% "spray-json" % "1.3.6"
+
     ),
 
     // Include .proto files in the project resources

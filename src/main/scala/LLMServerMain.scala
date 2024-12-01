@@ -19,14 +19,14 @@ object LLMServerMain extends App {
   val bindingFuture = Http().newServerAt(serverHost, serverPort).bind(LLMServiceEndpoints.routes)
 
   // Logging the server startup and waiting for input to stop
-  println(s"Server running at http://$serverHost:$serverPort/\nPress RETURN to stop...")
-  StdIn.readLine()
-
-  // Unbinding the server and terminating the system when done
-  bindingFuture
-    .flatMap(_.unbind())
-    .onComplete(_ => {
-      system.terminate()
-      println("Server stopped.")
-    })
+  println(s"Server running at http://$serverHost:$serverPort/")
+//  StdIn.readLine()
+//
+//  // Unbinding the server and terminating the system when done
+//  bindingFuture
+//    .flatMap(_.unbind())
+//    .onComplete(_ => {
+//      system.terminate()
+//      println("Server stopped.")
+//    })
 }

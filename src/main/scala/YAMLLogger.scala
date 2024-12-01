@@ -39,7 +39,7 @@ object YAML_Helper {
   // Saving the iteration results into a YAML file
   def save(results: ListBuffer[YAMLLogger]): Unit = {
     // Creating a new file with the current timestamp
-    val file = new File("src/main/resources/Results_Conversation/Results_Conversation-" + Instant.now().toString + ".yaml")
+    val file = new File("/llm/output-" + Instant.now().toString + ".yaml")
     val writer = new BufferedWriter(new FileWriter(file))
 
     try {
