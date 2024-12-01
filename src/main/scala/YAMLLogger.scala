@@ -38,9 +38,14 @@ object YAML_Helper {
 
   // Saving the iteration results into a YAML file
   def save(results: ListBuffer[YAMLLogger]): Unit = {
+    // Read directory and prefix from configuration
+    val outputDirectory = ConfigurationManager.getConfig("yaml-logger.output-directory")
+    val filenamePrefix = ConfigurationManager.getConfig("yaml-logger.filename-prefix")
+
     // Creating a new file with the current timestamp
-    val file = new File("/llm/output-" + Instant.now().toString + ".yaml")
+    val file = new File(s"$outputDirectory/$filenamePrefix" + Instant.now().toString + ".yaml")
     val writer = new BufferedWriter(new FileWriter(file))
+
 
     try {
       // Writing each iteration result to the YAML file
